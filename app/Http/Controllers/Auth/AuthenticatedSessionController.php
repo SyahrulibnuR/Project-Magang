@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Menampilkan halaman pilihan login.
      */
     public function create(): View
     {
@@ -20,18 +20,37 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Memproses login berdasarkan jenis akun.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        $loginType = $request->input('login_type');
+
+        // Validasi jenis akun
+        if (!in_array($loginType, ['admin', 'user'], true)) {
+            return back()->withErrors([
+                'email' => 'Jenis akun tidak valid.'
+            ])->onlyInput('email');
+        }
+
+        // Proses autentikasi Laravel Breeze
         $request->authenticate();
 
-        $request->session()->regenerate();
-
-        // Ambil data pengguna yang berhasil login
         $user = Auth::user();
 
-        // Arahkan berdasarkan role pengguna
+        // Periksa kesesuaian role dengan pilihan login
+        if ($user->role !== $loginType) {
+            Auth::logout();
+
+            return back()->withErrors([
+                'email' => 'Jenis akun yang dipilih tidak sesuai dengan akun Anda.'
+            ])->onlyInput('email');
+        }
+
+        // Regenerasi session
+        $request->session()->regenerate();
+
+        // Arahkan berdasarkan role
         if ($user->role === 'admin') {
             return redirect()->route('admin.dashboard');
         }
@@ -40,7 +59,7 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Destroy an authenticated session.
+     * Logout pengguna.
      */
     public function destroy(Request $request): RedirectResponse
     {

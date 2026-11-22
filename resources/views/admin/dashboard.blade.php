@@ -519,7 +519,7 @@
                 Dashboard
             </a>
 
-            <a href="#" title="Menu belum tersedia">
+            <a href="{{ route('admin.complaints.index') }}">
                 <i class="fa-solid fa-inbox"></i>
                 Data Pengaduan
             </a>
