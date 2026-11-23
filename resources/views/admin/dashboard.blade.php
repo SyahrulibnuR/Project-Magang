@@ -349,6 +349,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .activity-item strong {
@@ -418,6 +419,21 @@
             font-weight: 600;
         }
 
+        .status-diproses {
+            background: #fff1e4;
+            color: #ed9a43;
+        }
+
+        .status-selesai {
+            background: #e4f8ed;
+            color: #39b879;
+        }
+
+        .status-ditutup {
+            background: #f1eaff;
+            color: #9872df;
+        }
+
         .mobile-toggle {
             display: none;
             border: none;
@@ -435,8 +451,13 @@
         }
 
         @media(max-width: 1100px) {
-            .stats { grid-template-columns: repeat(2, 1fr); }
-            .content-grid { grid-template-columns: 1fr; }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media(max-width: 700px) {
@@ -524,7 +545,7 @@
                 Data Pengaduan
             </a>
 
-            <a href="#" title="Menu belum tersedia">
+            <a href="{{ route('admin.pelanggan.index') }}">
                 <i class="fa-solid fa-users"></i>
                 Data Pelanggan
             </a>
@@ -611,7 +632,7 @@
 
         <div class="section-heading">
             <h3>Ringkasan Pengaduan</h3>
-            <span>Data akan terhubung dengan database</span>
+            <span>Data terhubung dengan database</span>
         </div>
 
 
@@ -624,7 +645,7 @@
                     </div>
                     <i class="fa-solid fa-ellipsis" style="color:#b4c7d9"></i>
                 </div>
-                <h2>0</h2>
+                <h2>{{ $totalComplaints }}</h2>
                 <p>Total Pengaduan</p>
             </div>
 
@@ -635,7 +656,7 @@
                     </div>
                     <i class="fa-solid fa-ellipsis" style="color:#b4c7d9"></i>
                 </div>
-                <h2>0</h2>
+                <h2>{{ $newComplaints }}</h2>
                 <p>Pengaduan Baru</p>
             </div>
 
@@ -646,7 +667,7 @@
                     </div>
                     <i class="fa-solid fa-ellipsis" style="color:#b4c7d9"></i>
                 </div>
-                <h2>0</h2>
+                <h2>{{ $processingComplaints }}</h2>
                 <p>Sedang Diproses</p>
             </div>
 
@@ -657,7 +678,7 @@
                     </div>
                     <i class="fa-solid fa-ellipsis" style="color:#b4c7d9"></i>
                 </div>
-                <h2>0</h2>
+                <h2>{{ $completedComplaints }}</h2>
                 <p>Pengaduan Selesai</p>
             </div>
 
@@ -669,7 +690,7 @@
             <div class="panel">
                 <div class="section-heading">
                     <h3>Statistik Pengaduan</h3>
-                    <span>Ilustrasi data bulanan</span>
+                    <span>Tahun {{ now()->year }}</span>
                 </div>
 
                 <div class="chart-container">
@@ -681,38 +702,31 @@
             <div class="panel">
                 <div class="section-heading">
                     <h3>Aktivitas Terbaru</h3>
-                    <span>Aktivitas sistem</span>
+                    <span>Pengaduan pelanggan</span>
                 </div>
 
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="fa-solid fa-user-shield"></i>
-                    </div>
-                    <div>
-                        <strong>Administrator masuk</strong>
-                        <small>Anda berhasil masuk ke sistem</small>
-                    </div>
-                </div>
+                @forelse ($latestComplaints->take(3) as $complaint)
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fa-solid fa-envelope"></i>
+                        </div>
 
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="fa-solid fa-database"></i>
+                        <div>
+                            <strong>Pengaduan baru masuk</strong>
+                            <small>
+                                {{ $complaint->ticket_number }}
+                                -
+                                {{ $complaint->created_at->diffForHumans() }}
+                            </small>
+                        </div>
                     </div>
-                    <div>
-                        <strong>Sistem Customer Care</strong>
-                        <small>Dashboard berhasil dimuat</small>
+                @empty
+                    <div class="empty-state">
+                        <i class="fa-regular fa-bell-slash"></i>
+                        <p>Belum ada aktivitas pengaduan.</p>
                     </div>
-                </div>
+                @endforelse
 
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="fa-solid fa-circle-info"></i>
-                    </div>
-                    <div>
-                        <strong>Informasi sistem</strong>
-                        <small>Menunggu data pengaduan</small>
-                    </div>
-                </div>
             </div>
 
         </section>
@@ -737,14 +751,47 @@
                 </thead>
 
                 <tbody>
-                    <tr>
-                        <td colspan="5">
-                            <div class="empty-state">
-                                <i class="fa-regular fa-folder-open"></i>
-                                <p>Belum ada data pengaduan.</p>
-                            </div>
-                        </td>
-                    </tr>
+                    @forelse ($latestComplaints as $index => $complaint)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+
+                            <td>
+                                {{ $complaint->ticket_number }}
+                            </td>
+
+                            <td>
+                                {{ $complaint->user->name ?? 'Pengguna tidak ditemukan' }}
+                            </td>
+
+                            <td>
+                                {{ $complaint->created_at->format('d/m/Y') }}
+                            </td>
+
+                            <td>
+                                @php
+                                    $statusClass = match($complaint->status) {
+                                        'Diproses' => 'status-diproses',
+                                        'Selesai' => 'status-selesai',
+                                        'Ditutup' => 'status-ditutup',
+                                        default => ''
+                                    };
+                                @endphp
+
+                                <span class="status {{ $statusClass }}">
+                                    {{ $complaint->status }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <i class="fa-regular fa-folder-open"></i>
+                                    <p>Belum ada data pengaduan.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
 
@@ -762,15 +809,18 @@
 
         new Chart(chartCanvas, {
             type: 'line',
+
             data: {
                 labels: [
                     'Jan', 'Feb', 'Mar', 'Apr',
                     'Mei', 'Jun', 'Jul', 'Agu',
                     'Sep', 'Okt', 'Nov', 'Des'
                 ],
+
                 datasets: [{
-                    label: 'Contoh jumlah pengaduan',
-                    data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    label: 'Jumlah Pengaduan',
+                    data: @json($monthlyComplaintData),
+
                     borderColor: '#398bdc',
                     backgroundColor: 'rgba(57,139,220,0.12)',
                     fill: true,
@@ -780,14 +830,17 @@
                     pointBackgroundColor: '#398bdc'
                 }]
             },
+
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+
                 plugins: {
                     legend: {
                         display: false
                     }
                 },
+
                 scales: {
                     y: {
                         beginAtZero: true,
@@ -798,6 +851,7 @@
                             color: '#f0f4f8'
                         }
                     },
+
                     x: {
                         grid: {
                             display: false
