@@ -8,11 +8,13 @@ use Illuminate\Support\Str;
 
 class PengaduanController extends Controller
 {
+    // Menampilkan form pengaduan
     public function create()
     {
         return view('pengaduan.create');
     }
 
+    // Menyimpan pengaduan
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -37,5 +39,26 @@ class PengaduanController extends Controller
         return redirect()
             ->route('pengaduan.create')
             ->with('success', 'Pengaduan berhasil dikirim!');
+    }
+
+    // Menelusuri pengaduan berdasarkan kode tiket
+    public function telusuri(Request $request)
+    {
+        $kode = trim($request->query('kode_pengaduan', ''));
+
+        $pengaduan = null;
+        $sudahMencari = $request->has('kode_pengaduan');
+
+        if ($sudahMencari && $kode !== '') {
+            $pengaduan = Pengaduan::where('ticket_number', $kode)
+                ->where('user_id', auth()->id())
+                ->first();
+        }
+
+        return view('pengaduan.telusuri', compact(
+            'kode',
+            'pengaduan',
+            'sudahMencari'
+        ));
     }
 }

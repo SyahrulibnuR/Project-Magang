@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pengaduan;
+use App\Notifications\PengaduanDitanggapi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -67,6 +68,9 @@ class ComplaintController extends Controller
             'admin_response' => 'nullable|string|max:5000',
         ]);
 
+        // Simpan tanggapan sebelumnya
+        $tanggapanLama = $complaint->admin_response;
+
         $complaint->status = $validated['status'];
         $complaint->admin_response = $validated['admin_response'] ?? null;
 
@@ -79,6 +83,18 @@ class ComplaintController extends Controller
         }
 
         $complaint->save();
+
+        // Kirim notifikasi jika ada tanggapan baru atau tanggapan berubah
+        if (
+            !empty($complaint->admin_response) &&
+            $tanggapanLama !== $complaint->admin_response
+        ) {
+            $user = $complaint->user;
+
+            if ($user) {
+                $user->notify(new PengaduanDitanggapi($complaint));
+            }
+        }
 
         return redirect()
             ->route('admin.complaints.show', $complaint->id)

@@ -1,13 +1,12 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PengaduanController;
 use App\Http\Controllers\Admin\ComplaintController;
 use App\Http\Controllers\Admin\PelangganController;
-
+use App\Services\BeritaSuaraMerdekaService;
 use App\Models\Pengaduan;
 use App\Models\User;
 
@@ -22,20 +21,17 @@ Route::get('/', function () {
 
 
 // ==========================================
-// LOGIN ADMIN
+// HALAMAN LOGIN ADMIN DAN USER
 // ==========================================
 
+// Halaman Login Admin
 Route::get('/login/admin', function () {
     return view('auth.login-form', [
         'loginType' => 'admin'
     ]);
 })->middleware('guest')->name('login.admin');
 
-
-// ==========================================
-// LOGIN USER
-// ==========================================
-
+// Halaman Login User
 Route::get('/login/user', function () {
     return view('auth.login-form', [
         'loginType' => 'user'
@@ -44,27 +40,79 @@ Route::get('/login/user', function () {
 
 
 // ==========================================
-// DASHBOARD DAN FITUR USER
+// ROUTE UNTUK USER YANG SUDAH LOGIN
 // ==========================================
 
 Route::middleware(['auth'])->group(function () {
 
-    // Dashboard User
-    Route::get('/dashboard', function () {
-        return view('dashboard');
+    // ======================================
+    // DASHBOARD USER + BERITA + NOTIFIKASI
+    // ======================================
+
+    Route::get('/dashboard', function (BeritaSuaraMerdekaService $beritaService) {
+
+        $berita = $beritaService->ambilBerita();
+
+        // Mengambil 5 notifikasi terbaru milik user
+        $notifications = auth()->user()
+            ->notifications()
+            ->latest()
+            ->take(5)
+            ->get();
+
+        // Menghitung notifikasi yang belum dibaca
+        $unreadNotificationsCount = auth()->user()
+            ->unreadNotifications()
+            ->count();
+
+        return view('dashboard', compact(
+            'berita',
+            'notifications',
+            'unreadNotificationsCount'
+        ));
+
     })->name('dashboard');
 
 
-    // Form Pengaduan User
+    // ======================================
+    // FITUR PENGADUAN USER
+    // ======================================
+
     Route::get('/pengaduan/create', [PengaduanController::class, 'create'])
         ->name('pengaduan.create');
 
-    // Simpan Pengaduan User
     Route::post('/pengaduan', [PengaduanController::class, 'store'])
         ->name('pengaduan.store');
 
+    Route::get('/telusuri-aduan', [PengaduanController::class, 'telusuri'])
+        ->name('pengaduan.telusuri');
 
-    // Profile
+
+    // ======================================
+    // FITUR NOTIFIKASI USER
+    // ======================================
+
+    Route::post('/notifikasi/{id}/baca', function ($id) {
+
+        $notification = auth()->user()
+            ->notifications()
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $notification->markAsRead();
+
+        return back()->with(
+            'success',
+            'Notifikasi berhasil dibaca.'
+        );
+
+    })->name('notifikasi.baca');
+
+
+    // ======================================
+    // PROFILE USER
+    // ======================================
+
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->name('profile.edit');
 
@@ -78,85 +126,98 @@ Route::middleware(['auth'])->group(function () {
 
 
 // ==========================================
-// FITUR KHUSUS ADMIN
+// ROUTE KHUSUS ADMIN
 // ==========================================
 
-Route::middleware(['auth', 'admin'])->group(function () {
+Route::middleware(['auth', 'admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
 
-    // --------------------------------------
-    // DASHBOARD ADMIN
-    // --------------------------------------
+        // ======================================
+        // DASHBOARD ADMIN
+        // ======================================
 
-    Route::get('/admin/dashboard', function () {
+        Route::get('/dashboard', function () {
 
-        $totalComplaints = Pengaduan::count();
+            // Menghitung total pengaduan
+            $totalComplaints = Pengaduan::count();
 
-        $newComplaints = Pengaduan::where('status', 'Baru')->count();
+            // Menghitung pengaduan berdasarkan status
+            $newComplaints = Pengaduan::where('status', 'Baru')->count();
 
-        $processingComplaints = Pengaduan::where('status', 'Diproses')->count();
+            $processingComplaints = Pengaduan::where('status', 'Diproses')->count();
 
-        $completedComplaints = Pengaduan::where('status', 'Selesai')->count();
-
-        $totalCustomers = User::where('role', 'user')->count();
-
-        $latestComplaints = Pengaduan::with('user')
-            ->latest()
-            ->take(5)
-            ->get();
-
-        $monthlyCounts = Pengaduan::selectRaw(
-            'MONTH(created_at) as bulan, COUNT(*) as total'
-        )
-            ->whereYear('created_at', now()->year)
-            ->groupBy('bulan')
-            ->pluck('total', 'bulan');
-
-        $monthlyComplaintData = collect(range(1, 12))
-            ->map(function ($bulan) use ($monthlyCounts) {
-                return (int) ($monthlyCounts[$bulan] ?? 0);
-            })
-            ->values()
-            ->all();
-
-        return view('admin.dashboard', compact(
-            'totalComplaints',
-            'newComplaints',
-            'processingComplaints',
-            'completedComplaints',
-            'totalCustomers',
-            'latestComplaints',
-            'monthlyComplaintData'
-        ));
-
-    })->name('admin.dashboard');
+            $completedComplaints = Pengaduan::where('status', 'Selesai')->count();
 
 
-    // --------------------------------------
-    // DATA PENGADUAN
-    // --------------------------------------
-
-    Route::get('/admin/pengaduan', [ComplaintController::class, 'index'])
-        ->name('admin.complaints.index');
-
-    Route::get('/admin/pengaduan/{complaint}', [ComplaintController::class, 'show'])
-        ->name('admin.complaints.show');
-
-    Route::patch('/admin/pengaduan/{complaint}', [ComplaintController::class, 'update'])
-        ->name('admin.complaints.update');
-
-    Route::delete('/admin/pengaduan/{complaint}', [ComplaintController::class, 'destroy'])
-        ->name('admin.complaints.destroy');
+            // Mengambil 5 pengaduan terbaru beserta data pelanggan
+            $latestComplaints = Pengaduan::with('user')
+                ->latest()
+                ->take(5)
+                ->get();
 
 
-    // --------------------------------------
-    // DATA PELANGGAN
-    // --------------------------------------
+            // Menyiapkan data grafik Januari sampai Desember
+            $monthlyComplaintData = array_fill(0, 12, 0);
 
-    Route::get('/admin/pelanggan', [PelangganController::class, 'index'])
-        ->name('admin.pelanggan.index');
+            $monthlyData = Pengaduan::selectRaw(
+                'MONTH(created_at) as bulan, COUNT(*) as total'
+            )
+                ->whereYear('created_at', now()->year)
+                ->groupBy('bulan')
+                ->orderBy('bulan')
+                ->get();
 
-    Route::get('/admin/pelanggan/{pelanggan}', [PelangganController::class, 'show'])
-        ->name('admin.pelanggan.show');
+            foreach ($monthlyData as $data) {
+                $monthlyComplaintData[$data->bulan - 1] = $data->total;
+            }
+
+
+            // Menghitung total pelanggan
+            $totalPelanggan = User::where('role', 'user')->count();
+
+
+            // Menampilkan dashboard admin
+            return view('admin.dashboard', compact(
+                'totalComplaints',
+                'newComplaints',
+                'processingComplaints',
+                'completedComplaints',
+                'latestComplaints',
+                'monthlyComplaintData',
+                'totalPelanggan'
+            ));
+
+        })->name('dashboard');
+
+
+        // ======================================
+        // MANAJEMEN PENGADUAN ADMIN
+        // ======================================
+
+        Route::get('/pengaduan', [ComplaintController::class, 'index'])
+            ->name('complaints.index');
+
+        Route::get('/pengaduan/{complaint}', [ComplaintController::class, 'show'])
+            ->name('complaints.show');
+
+        Route::put('/pengaduan/{complaint}', [ComplaintController::class, 'update'])
+            ->name('complaints.update');
+
+        Route::delete('/pengaduan/{complaint}', [ComplaintController::class, 'destroy'])
+            ->name('complaints.destroy');
+
+
+        // ======================================
+        // MANAJEMEN PELANGGAN ADMIN
+        // ======================================
+
+        Route::get('/pelanggan', [PelangganController::class, 'index'])
+            ->name('pelanggan.index');
+
+        Route::get('/pelanggan/{pelanggan}', [PelangganController::class, 'show'])
+            ->name('pelanggan.show');
 
 });
 
