@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pengaduan;
+use App\Services\BeritaSuaraMerdekaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class PengaduanController extends Controller
 {
     // Dashboard User
-    public function dashboard()
+   public function dashboard(BeritaSuaraMerdekaService $beritaService)
     {
         $userId = auth()->id();
 
@@ -31,14 +32,31 @@ class PengaduanController extends Controller
             ->latest()
             ->take(5)
             ->get();
+        // Mengambil berita Suara Merdeka
+$berita = $beritaService->ambilBerita();
 
-        return view('dashboard', compact(
-            'totalPengaduan',
-            'pengaduanBaru',
-            'pengaduanDiproses',
-            'pengaduanSelesai',
-            'latestPengaduan'
-        ));
+// Mengambil 5 notifikasi terbaru milik User
+$notifications = auth()->user()
+    ->notifications()
+    ->latest()
+    ->take(5)
+    ->get();
+
+// Menghitung notifikasi yang belum dibaca
+$unreadNotificationsCount = auth()->user()
+    ->unreadNotifications()
+    ->count();
+
+       return view('dashboard', compact(
+    'totalPengaduan',
+    'pengaduanBaru',
+    'pengaduanDiproses',
+    'pengaduanSelesai',
+    'latestPengaduan',
+    'berita',
+    'notifications',
+    'unreadNotificationsCount'
+));
     }
 
     // Menampilkan form pengaduan
@@ -111,5 +129,26 @@ class PengaduanController extends Controller
             ->firstOrFail();
 
         return view('pengaduan.show', compact('pengaduan'));
+    }
+
+    // Menelusuri pengaduan berdasarkan kode tiket
+    public function telusuri(Request $request)
+    {
+        $kode = trim($request->query('kode_pengaduan', ''));
+
+        $pengaduan = null;
+        $sudahMencari = $request->has('kode_pengaduan');
+
+        if ($sudahMencari && $kode !== '') {
+            $pengaduan = Pengaduan::where('ticket_number', $kode)
+                ->where('user_id', auth()->id())
+                ->first();
+        }
+
+        return view('pengaduan.telusuri', compact(
+            'kode',
+            'pengaduan',
+            'sudahMencari'
+        ));
     }
 }
