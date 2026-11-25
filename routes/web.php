@@ -20,21 +20,32 @@ Route::get('/login/user', function () {
     return view('auth.login-form', ['loginType' => 'user']);
 })->middleware('guest')->name('login.user');
 
+
 // Dashboard dan fitur User
 Route::middleware('auth')->group(function () {
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    // Dashboard
+    Route::get('/dashboard', [PengaduanController::class, 'dashboard'])
+        ->name('dashboard');
 
-    // Fitur Pengaduan User
+    // Form pengaduan
     Route::get('/pengaduan/create', [PengaduanController::class, 'create'])
         ->name('pengaduan.create');
 
+    // Simpan pengaduan
     Route::post('/pengaduan', [PengaduanController::class, 'store'])
         ->name('pengaduan.store');
 
-    // Profile
+    // Riwayat pengaduan
+    Route::get('/pengaduan', [PengaduanController::class, 'index'])
+        ->name('pengaduan.index');
+
+    // Detail dan pelacakan tiket
+    Route::get('/pengaduan/{ticketNumber}', [PengaduanController::class, 'show'])
+        ->where('ticketNumber', 'SMC-[0-9]{8}-[A-Z0-9]{6}')
+        ->name('pengaduan.show');
+
+    // Profil
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->name('profile.edit');
 
@@ -44,6 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
 });
+
 
 // Fitur Admin
 Route::middleware(['auth', 'admin'])->group(function () {
