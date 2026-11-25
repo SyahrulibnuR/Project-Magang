@@ -478,6 +478,158 @@
         .footer-content p{color:#aeb4c0;font-size:12px;}
         .footer-right{color:#aeb4c0;font-size:12px;}
 
+/* DASHBOARD STATISTICS */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 35px;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e6e8ed;
+    border-radius: 14px;
+    padding: 22px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.035);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #fde7e8;
+    color: #bd171d;
+    font-size: 20px;
+}
+
+.stat-info p {
+    color: #9299a6;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.stat-info h3 {
+    color: #202b3c;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+/* RECENT COMPLAINTS */
+.recent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 17px 0;
+    border-bottom: 1px solid #edf0f4;
+}
+
+.recent-item:last-child {
+    border-bottom: none;
+}
+
+.recent-ticket {
+    color: #bd171d;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.recent-title {
+    color: #303b4c;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.recent-date {
+    color: #9299a6;
+    font-size: 11px;
+}
+
+.recent-status {
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.recent-baru {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.recent-diproses {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.recent-selesai {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.recent-ditolak {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.recent-lainnya {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.btn-detail {
+    display: inline-block;
+    margin-top: 8px;
+    color: #bd171d;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+@media(max-width: 1050px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media(max-width: 550px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 14px;
+        gap: 9px;
+    }
+
+    .stat-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 15px;
+    }
+
+    .stat-info h3 {
+        font-size: 21px;
+    }
+
+    .recent-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+
         /* RESPONSIVE */
         @media(max-width:1050px){
             .navbar{padding:0 4%;}
@@ -693,6 +845,10 @@
             <div class="avatar">{{ $inisial }}</div>
             <span>{{ $nama }}</span>
         </div>
+        <a href="{{ route('profile.edit') }}"
+   style="color:#bd171d; font-size:13px; font-weight:700;">
+    Profil Saya
+</a>
 
         <form method="POST" action="{{ route('logout') }}">
             @csrf
@@ -780,6 +936,52 @@
 
 <!-- MAIN CONTENT -->
 <main class="container">
+
+<!-- STATISTIK PENGADUAN -->
+<section class="stats-grid" id="statistik">
+
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fa-solid fa-file-lines"></i>
+        </div>
+        <div class="stat-info">
+            <p>Total Pengaduan</p>
+            <h3>{{ $totalPengaduan }}</h3>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fa-solid fa-clock"></i>
+        </div>
+        <div class="stat-info">
+            <p>Pengaduan Baru</p>
+            <h3>{{ $pengaduanBaru }}</h3>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fa-solid fa-spinner"></i>
+        </div>
+        <div class="stat-info">
+            <p>Sedang Diproses</p>
+            <h3>{{ $pengaduanDiproses }}</h3>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="stat-info">
+            <p>Pengaduan Selesai</p>
+            <h3>{{ $pengaduanSelesai }}</h3>
+        </div>
+    </div>
+
+</section>
+
 
     <!-- PANDUAN -->
     <section class="guide-card" id="panduan">
@@ -871,49 +1073,86 @@
         </section>
 
 
-        <!-- PENGADUAN TERBARU -->
-        <section id="informasi">
+<!-- PENGADUAN TERBARU -->
+<section id="informasi" class="section-card">
 
-            <div class="latest-header">
+    <div class="latest-header">
+        <div>
+            <h3>Pengaduan Terbaru</h3>
+            <p>Lihat perkembangan pengaduan pelanggan</p>
+        </div>
 
-                <div>
-                    <h3>Pengaduan Terbaru</h3>
-                    <p>Lihat perkembangan pengaduan pelanggan</p>
-                </div>
-
-                <a href="{{ route('pengaduan.telusuri') }}" class="see-all">
-                    Lihat Semua
-                    <i class="fa-solid fa-arrow-right"></i>
-                </a>
-
-            </div>
-
-            <div class="empty-state">
-
-                <div class="empty-icon">
-                    <i class="fa-solid fa-inbox"></i>
-                </div>
-
-                <h4>Belum Ada Pengaduan</h4>
-
-                <p>
-                    Saat ini belum ada informasi pengaduan yang
-                    ditampilkan. Silakan buat pengaduan apabila
-                    Anda membutuhkan bantuan.
-                </p>
-
-                <a href="/pengaduan/create" class="btn-main">
-                    <i class="fa-solid fa-plus"></i>
-                    Buat Pengaduan
-                </a>
-
-            </div>
-
-        </section>
-
+        <a href="{{ route('pengaduan.index') }}" class="see-all">
+            Lihat Semua
+            <i class="fa-solid fa-arrow-right"></i>
+        </a>
     </div>
 
-</main>
+    @forelse($latestPengaduan as $pengaduan)
+
+        @php
+            $statusClass = match($pengaduan->status) {
+                'Baru' => 'recent-baru',
+                'Diproses' => 'recent-diproses',
+                'Selesai' => 'recent-selesai',
+                'Ditolak' => 'recent-ditolak',
+                default => 'recent-lainnya',
+            };
+        @endphp
+
+        <div class="recent-item">
+            <div>
+                <div class="recent-ticket">
+                    {{ $pengaduan->ticket_number }}
+                </div>
+
+                <div class="recent-title">
+                    {{ $pengaduan->title }}
+                </div>
+
+                <div class="recent-date">
+                    {{ $pengaduan->created_at->format('d/m/Y H:i') }}
+                    · {{ $pengaduan->category }}
+                </div>
+
+                <a href="{{ route('pengaduan.show', $pengaduan->ticket_number) }}"
+                   class="btn-detail">
+                    Lihat Detail →
+                </a>
+            </div>
+
+            <span class="recent-status {{ $statusClass }}">
+                {{ $pengaduan->status }}
+            </span>
+        </div>
+
+    @empty
+
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fa-solid fa-inbox"></i>
+            </div>
+
+            <h4>Belum Ada Pengaduan</h4>
+
+            <p>
+                Kamu belum pernah mengirimkan pengaduan.
+                Silakan buat laporan jika membutuhkan bantuan.
+            </p>
+
+            <a href="{{ route('pengaduan.create') }}" class="btn-main">
+                <i class="fa-solid fa-plus"></i>
+                Buat Pengaduan
+            </a>
+        </div>
+
+    @endforelse
+
+</section>
+
+</div>
+<!-- AKHIR CONTENT GRID -->
+
 
 
 <!-- BERITA TERBARU SUARA MERDEKA -->

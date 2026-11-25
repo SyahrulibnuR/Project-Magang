@@ -23,9 +23,10 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $response = $this->post('/login', [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
+    'email' => $user->email,
+    'password' => 'password',
+    'login_type' => 'user',
+]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(RouteServiceProvider::HOME);

@@ -6,7 +6,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PengaduanController;
 use App\Http\Controllers\Admin\ComplaintController;
 use App\Http\Controllers\Admin\PelangganController;
-use App\Services\BeritaSuaraMerdekaService;
 use App\Models\Pengaduan;
 use App\Models\User;
 
@@ -24,14 +23,12 @@ Route::get('/', function () {
 // HALAMAN LOGIN ADMIN DAN USER
 // ==========================================
 
-// Halaman Login Admin
 Route::get('/login/admin', function () {
     return view('auth.login-form', [
         'loginType' => 'admin'
     ]);
 })->middleware('guest')->name('login.admin');
 
-// Halaman Login User
 Route::get('/login/user', function () {
     return view('auth.login-form', [
         'loginType' => 'user'
@@ -40,38 +37,14 @@ Route::get('/login/user', function () {
 
 
 // ==========================================
-// ROUTE UNTUK USER YANG SUDAH LOGIN
+// ROUTE USER YANG SUDAH LOGIN
 // ==========================================
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware('auth')->group(function () {
 
-    // ======================================
-    // DASHBOARD USER + BERITA + NOTIFIKASI
-    // ======================================
-
-    Route::get('/dashboard', function (BeritaSuaraMerdekaService $beritaService) {
-
-        $berita = $beritaService->ambilBerita();
-
-        // Mengambil 5 notifikasi terbaru milik user
-        $notifications = auth()->user()
-            ->notifications()
-            ->latest()
-            ->take(5)
-            ->get();
-
-        // Menghitung notifikasi yang belum dibaca
-        $unreadNotificationsCount = auth()->user()
-            ->unreadNotifications()
-            ->count();
-
-        return view('dashboard', compact(
-            'berita',
-            'notifications',
-            'unreadNotificationsCount'
-        ));
-
-    })->name('dashboard');
+    // Dashboard User
+    Route::get('/dashboard', [PengaduanController::class, 'dashboard'])
+        ->name('dashboard');
 
 
     // ======================================
@@ -84,6 +57,15 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/pengaduan', [PengaduanController::class, 'store'])
         ->name('pengaduan.store');
 
+    Route::get('/pengaduan', [PengaduanController::class, 'index'])
+        ->name('pengaduan.index');
+
+    Route::get('/pengaduan/{ticketNumber}', [PengaduanController::class, 'show'])
+        ->where('ticketNumber', 'SMC-[0-9]{8}-[A-Z0-9]{6}')
+        ->name('pengaduan.show');
+
+
+    // Penelusuran pengaduan
     Route::get('/telusuri-aduan', [PengaduanController::class, 'telusuri'])
         ->name('pengaduan.telusuri');
 
@@ -134,31 +116,22 @@ Route::middleware(['auth', 'admin'])
     ->name('admin.')
     ->group(function () {
 
-        // ======================================
-        // DASHBOARD ADMIN
-        // ======================================
-
+        // Dashboard Admin
         Route::get('/dashboard', function () {
 
-            // Menghitung total pengaduan
             $totalComplaints = Pengaduan::count();
 
-            // Menghitung pengaduan berdasarkan status
             $newComplaints = Pengaduan::where('status', 'Baru')->count();
 
             $processingComplaints = Pengaduan::where('status', 'Diproses')->count();
 
             $completedComplaints = Pengaduan::where('status', 'Selesai')->count();
 
-
-            // Mengambil 5 pengaduan terbaru beserta data pelanggan
             $latestComplaints = Pengaduan::with('user')
                 ->latest()
                 ->take(5)
                 ->get();
 
-
-            // Menyiapkan data grafik Januari sampai Desember
             $monthlyComplaintData = array_fill(0, 12, 0);
 
             $monthlyData = Pengaduan::selectRaw(
@@ -173,12 +146,8 @@ Route::middleware(['auth', 'admin'])
                 $monthlyComplaintData[$data->bulan - 1] = $data->total;
             }
 
-
-            // Menghitung total pelanggan
             $totalPelanggan = User::where('role', 'user')->count();
 
-
-            // Menampilkan dashboard admin
             return view('admin.dashboard', compact(
                 'totalComplaints',
                 'newComplaints',
@@ -192,34 +161,31 @@ Route::middleware(['auth', 'admin'])
         })->name('dashboard');
 
 
-        // ======================================
-        // MANAJEMEN PENGADUAN ADMIN
-        // ======================================
-
+        // Manajemen pengaduan Admin
         Route::get('/pengaduan', [ComplaintController::class, 'index'])
             ->name('complaints.index');
 
         Route::get('/pengaduan/{complaint}', [ComplaintController::class, 'show'])
             ->name('complaints.show');
 
-        Route::put('/pengaduan/{complaint}', [ComplaintController::class, 'update'])
-            ->name('complaints.update');
+        // Mendukung PUT dan PATCH
+        Route::match(['put', 'patch'], '/pengaduan/{complaint}', [
+            ComplaintController::class,
+            'update'
+        ])->name('complaints.update');
 
         Route::delete('/pengaduan/{complaint}', [ComplaintController::class, 'destroy'])
             ->name('complaints.destroy');
 
 
-        // ======================================
-        // MANAJEMEN PELANGGAN ADMIN
-        // ======================================
-
+        // Manajemen pelanggan Admin
         Route::get('/pelanggan', [PelangganController::class, 'index'])
             ->name('pelanggan.index');
 
         Route::get('/pelanggan/{pelanggan}', [PelangganController::class, 'show'])
             ->name('pelanggan.show');
 
-});
+    });
 
 
 // ==========================================
